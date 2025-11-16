@@ -8,6 +8,8 @@ import {
   MenuItem,
   Button,
   CircularProgress,
+  Grid,
+  Chip,
 } from "@mui/material";
 import axios from "axios";
 
@@ -18,23 +20,26 @@ function MealPlan() {
     diet_type: "Veg",
     cuisine: "South Indian",
     protein: 110,
-    diet_preference: "High Protein",   // ⭐ NEW
+    diet_preference: "High Protein",
   });
 
   const [loading, setLoading] = useState(false);
-  const [mealPlan, setMealPlan] = useState("");
+  const [mealPlan, setMealPlan] = useState(null);
+  const [error, setError] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: name === "calories" || name === "protein" ? Number(value) : value,
+      [name]:
+        name === "calories" || name === "protein" ? Number(value) : value,
     }));
   };
 
   const handleGenerate = async () => {
     setLoading(true);
-    setMealPlan("");
+    setMealPlan(null);
+    setError("");
 
     try {
       const res = await axios.post(
@@ -42,14 +47,57 @@ function MealPlan() {
         form
       );
 
-      setMealPlan(res.data.meal_plan || "No meal plan returned.");
+      if (res.data.error) {
+        setError(res.data.error);
+      } else if (res.data.meal_plan) {
+        setMealPlan(res.data.meal_plan);
+      } else {
+        setError("No meal plan returned.");
+      }
     } catch (err) {
       console.error(err);
-      setMealPlan("⚠️ Network error. Try again.");
+      setError("⚠️ Network error. Try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  const renderMealCard = (title, data, emoji) => {
+    if (!data) return null;
+
+    return (
+      <Grid item xs={12} md={6}>
+        <Card
+          sx={{
+            borderRadius: 3,
+            padding: 2.5,
+            boxShadow: 3,
+            backgroundColor: "#ffffff",
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+            {emoji} {title}
+          </Typography>
+          <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
+            {data.dish}
+          </Typography>
+          <Typography sx={{ fontSize: "0.9rem", color: "#555", mb: 1.5 }}>
+            {data.description}
+          </Typography>
+
+          <Typography sx={{ fontWeight: 600, mb: 0.5 }}>Macros</Typography>
+          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+            <Chip label={`Protein: ${data.protein} g`} />
+            <Chip label={`Carbs: ${data.carbs} g`} />
+            <Chip label={`Fats: ${data.fats} g`} />
+            <Chip label={`Calories: ${data.calories} kcal`} />
+          </Box>
+        </Card>
+      </Grid>
+    );
+  };
+
+  const summary = mealPlan?.summary;
 
   return (
     <Box
@@ -63,15 +111,19 @@ function MealPlan() {
     >
       <Card
         sx={{
-          maxWidth: 900,
+          maxWidth: 1000,
           width: "100%",
           padding: 4,
           borderRadius: 3,
           boxShadow: 3,
         }}
       >
-        <Typography variant="h4" sx={{ fontWeight: 600, mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
           AI Meal Plan Generator 🍽️
+        </Typography>
+        <Typography sx={{ mb: 3, color: "#555" }}>
+          Get a full-day meal plan personalized to your goal, calories and
+          preferences.
         </Typography>
 
         {/* Form */}
@@ -124,6 +176,7 @@ function MealPlan() {
             value={form.cuisine}
             onChange={handleChange}
             fullWidth
+            placeholder="South Indian, North Indian, etc."
           />
 
           <TextField
@@ -135,7 +188,6 @@ function MealPlan() {
             fullWidth
           />
 
-          {/* ⭐ NEW Diet Preference Dropdown */}
           <TextField
             select
             label="Diet Preference"
@@ -178,36 +230,73 @@ function MealPlan() {
           )}
         </Button>
 
-        {/* Result */}
-        <Card
-          sx={{
-            padding: 2,
-            borderRadius: 2,
-            backgroundColor: "#ffffff",
-            maxHeight: "400px",
-            overflowY: "auto",
-          }}
-        >
-          <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-            Result
-          </Typography>
+        {error && (
+          <Typography sx={{ color: "red", mb: 2 }}>{error}</Typography>
+        )}
 
-          {mealPlan ? (
-            <pre
-              style={{
-                whiteSpace: "pre-wrap",
-                fontFamily: "inherit",
-                fontSize: "0.95rem",
-              }}
-            >
-              {mealPlan}
-            </pre>
-          ) : (
-            <Typography variant="body1" sx={{ color: "gray" }}>
-              No plan yet. Fill details and click "Generate AI Meal Plan".
-            </Typography>
-          )}
-        </Card>
+        {/* Result */}
+        {!mealPlan && !error && !loading && (
+          <Typography sx={{ color: "gray" }}>
+            No plan yet. Fill details and click{" "}
+            <strong>Generate AI Meal Plan</strong>.
+          </Typography>
+        )}
+
+        {mealPlan && (
+          <>
+            {/* Summary Card */}
+            {summary && (
+              <Card
+                sx={{
+                  borderRadius: 3,
+                  padding: 2.5,
+                  boxShadow: 2,
+                  background:
+                    "linear-gradient(135deg, #5C6BC0, #42A5F5)",
+                  color: "white",
+                  mb: 3,
+                }}
+              >
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                  📊 Daily Macro Summary
+                </Typography>
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 1.5,
+                    alignItems: "center",
+                  }}
+                >
+                  <Chip
+                    label={`Protein: ${summary.total_protein} g`}
+                    sx={{ backgroundColor: "rgba(255,255,255,0.2)" }}
+                  />
+                  <Chip
+                    label={`Carbs: ${summary.total_carbs} g`}
+                    sx={{ backgroundColor: "rgba(255,255,255,0.2)" }}
+                  />
+                  <Chip
+                    label={`Fats: ${summary.total_fats} g`}
+                    sx={{ backgroundColor: "rgba(255,255,255,0.2)" }}
+                  />
+                  <Chip
+                    label={`Calories: ${summary.total_calories} kcal`}
+                    sx={{ backgroundColor: "rgba(255,255,255,0.2)" }}
+                  />
+                </Box>
+              </Card>
+            )}
+
+            {/* Meal Cards Grid */}
+            <Grid container spacing={2}>
+              {renderMealCard("Breakfast", mealPlan.breakfast, "🥞")}
+              {renderMealCard("Lunch", mealPlan.lunch, "🍛")}
+              {renderMealCard("Snack", mealPlan.snack, "🍏")}
+              {renderMealCard("Dinner", mealPlan.dinner, "🍽️")}
+            </Grid>
+          </>
+        )}
       </Card>
     </Box>
   );

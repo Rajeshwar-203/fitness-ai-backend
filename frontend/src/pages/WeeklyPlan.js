@@ -109,58 +109,63 @@ function WeeklyPlan() {
       )}
 
       {/* Weekly Cards */}
-      {weeklyPlan && (
-        <Grid container spacing={2} sx={{ mt: 1 }}>
-          {weeklyPlan.map((dayItem, index) => (
-            <Grid item xs={12} sm={6} md={4} key={index}>
-              <Card
-                sx={{
-                  borderRadius: 3,
-                  padding: 2.5,
-                  boxShadow: 3,
-                  background: "#ffffff",
-                  borderTop: "4px solid #5C6BC0",
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                }}
+
+
+{weeklyPlan && (
+  <Grid container spacing={2} sx={{ mt: 1 }}>
+    {weeklyPlan.map((dayItem, index) => {
+      const macros = dayItem.macros || {};
+      return (
+        <Grid item xs={12} sm={6} md={4} key={index}>
+          <Card
+            sx={{
+              borderRadius: 3,
+              padding: 2.5,
+              boxShadow: 3,
+              background: "#ffffff",
+              borderTop: "4px solid #5C6BC0",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <Box>
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 700, mb: 0.5, color: "#303F9F" }}
               >
-                <Box>
-                  <Typography
-                    variant="h6"
-                    sx={{ fontWeight: 700, mb: 0.5, color: "#303F9F" }}
-                  >
-                    {dayItem.day}
-                  </Typography>
-                  <Typography sx={{ mb: 1.5, color: "#555" }}>
-                    <strong>Workout:</strong> {dayItem.workout}
-                  </Typography>
+                {dayItem.day}
+              </Typography>
+              <Typography sx={{ mb: 1.5, color: "#555" }}>
+                <strong>Workout:</strong> {dayItem.workout}
+              </Typography>
 
-                  <Divider sx={{ my: 1.5 }} />
+              <Divider sx={{ my: 1.5 }} />
 
-                  <Typography sx={{ mb: 1 }}>
-                    <strong>Calories:</strong> {dayItem.calories} kcal
-                  </Typography>
+              <Typography sx={{ mb: 1 }}>
+                <strong>Calories:</strong> {dayItem.calories} kcal
+              </Typography>
 
-                  <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Macros
-                  </Typography>
-                  <Typography sx={{ fontSize: "0.95rem" }}>
-                    Protein: {dayItem.macros.protein_g} g
-                  </Typography>
-                  <Typography sx={{ fontSize: "0.95rem" }}>
-                    Carbs: {dayItem.macros.carbs_g} g
-                  </Typography>
-                  <Typography sx={{ fontSize: "0.95rem" }}>
-                    Fats: {dayItem.macros.fats_g} g
-                  </Typography>
-                </Box>
-              </Card>
-            </Grid>
-          ))}
+              <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
+                Macros
+              </Typography>
+              <Typography sx={{ fontSize: "0.95rem" }}>
+                Protein: {macros.protein_g ?? "-"} g
+              </Typography>
+              <Typography sx={{ fontSize: "0.95rem" }}>
+                Carbs: {macros.carbs_g ?? "-"} g
+              </Typography>
+              <Typography sx={{ fontSize: "0.95rem" }}>
+                Fats: {macros.fats_g ?? "-"} g
+              </Typography>
+            </Box>
+          </Card>
         </Grid>
-      )}
+      );
+    })}
+  </Grid>
+)}
     </Box>
   );
 }

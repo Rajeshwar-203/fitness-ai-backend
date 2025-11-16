@@ -7,6 +7,8 @@ import {
   MenuItem,
   Button,
   CircularProgress,
+  Grid,
+  Chip,
 } from "@mui/material";
 import axios from "axios";
 
@@ -21,7 +23,8 @@ function WorkoutAI() {
   });
 
   const [loading, setLoading] = useState(false);
-  const [workoutPlan, setWorkoutPlan] = useState("");
+  const [workoutPlan, setWorkoutPlan] = useState(null);
+  const [error, setError] = useState("");
 
   const equipmentOptions = [
     "Dumbbells",
@@ -43,15 +46,10 @@ function WorkoutAI() {
   ];
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, multiple, selectedOptions } = e.target;
 
-    // Multi-select for equipment & health conditions
-    if (e.target.multiple) {
-      const selected = Array.from(
-        e.target.selectedOptions,
-        (option) => option.value
-      );
-
+    if (multiple) {
+      const selected = Array.from(selectedOptions, (opt) => opt.value);
       setForm((prev) => ({ ...prev, [name]: selected }));
     } else {
       setForm((prev) => ({ ...prev, [name]: value }));
@@ -60,7 +58,8 @@ function WorkoutAI() {
 
   const handleGenerate = async () => {
     setLoading(true);
-    setWorkoutPlan("");
+    setWorkoutPlan(null);
+    setError("");
 
     try {
       const res = await axios.post(
@@ -68,13 +67,27 @@ function WorkoutAI() {
         form
       );
 
-      setWorkoutPlan(res.data.workout_plan || "No workout returned.");
+      if (res.data.error) {
+        setError(res.data.error);
+      } else if (Array.isArray(res.data.workout_plan)) {
+        setWorkoutPlan(res.data.workout_plan);
+      } else {
+        setError("No workout returned.");
+      }
     } catch (err) {
       console.error(err);
-      setWorkoutPlan("⚠️ Network error. Try again.");
+      setError("⚠️ Network error. Try again.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const difficultyColor = (diff) => {
+    if (!diff) return "default";
+    const d = diff.toLowerCase();
+    if (d === "easy") return "success";
+    if (d === "hard") return "error";
+    return "warning"; // OK
   };
 
   return (
@@ -89,15 +102,19 @@ function WorkoutAI() {
     >
       <Card
         sx={{
-          maxWidth: 900,
+          maxWidth: 1000,
           width: "100%",
           padding: 4,
           borderRadius: 3,
           boxShadow: 3,
         }}
       >
-        <Typography variant="h4" sx={{ fontWeight: 600, mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
           AI Workout Generator 💪🤖
+        </Typography>
+        <Typography sx={{ mb: 3, color: "#555" }}>
+          Get a full routine with warm-up, main workout & cool-down based on
+          your goal, time, and health conditions.
         </Typography>
 
         {/* FORM GRID */}
@@ -206,35 +223,82 @@ function WorkoutAI() {
           )}
         </Button>
 
-        <Card
-          sx={{
-            padding: 2,
-            borderRadius: 2,
-            backgroundColor: "white",
-            maxHeight: "400px",
-            overflowY: "auto",
-          }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Result
-          </Typography>
+        {error && (
+          <Typography sx={{ color: "red", mb: 2 }}>{error}</Typography>
+        )}
 
-          {workoutPlan ? (
-            <pre
-              style={{
-                whiteSpace: "pre-wrap",
-                fontFamily: "inherit",
-                fontSize: "0.95rem",
-              }}
-            >
-              {workoutPlan}
-            </pre>
-          ) : (
-            <Typography sx={{ color: "gray" }}>
-              Fill details and click "Generate Workout".
-            </Typography>
-          )}
-        </Card>
+        {!workoutPlan && !error && !loading && (
+          <Typography sx={{ color: "gray" }}>
+            Fill details and click <strong>Generate Workout</strong>.
+          </Typography>
+        )}
+
+        {/* RESULT CARDS */}
+        {Array.isArray(workoutPlan) && (
+          <Grid container spacing={2}>
+            {workoutPlan.map((ex, idx) => (
+              <Grid item xs={12} md={6} key={idx}>
+                <Card
+                  sx={{
+                    borderRadius: 3,
+                    padding: 2,
+                    boxShadow: 2,
+                    backgroundColor: "#ffffff",
+                    height: "100%",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="h6"
+                      sx={{ fontWeight: 700, pr: 1 }}
+                    >
+                      {ex.exercise}
+                    </Typography>
+                    {ex.difficulty && (
+                      <Chip
+                        label={ex.difficulty}
+                        color={difficultyColor(ex.difficulty)}
+                        size="small"
+                      />
+                    )}
+                  </Box>
+
+                  <Typography
+                    sx={{ fontSize: "0.85rem", color: "#757575", mb: 0.5 }}
+                  >
+                    {ex.phase && `Phase: ${ex.phase}`}
+                  </Typography>
+
+                  {ex.muscles && (
+                    <Typography sx={{ mb: 0.5 }}>
+                      <strong>Muscles:</strong> {ex.muscles}
+                    </Typography>
+                  )}
+
+                  {ex.duration && (
+                    <Typography sx={{ mb: 0.5 }}>
+                      <strong>Duration / Sets:</strong> {ex.duration}
+                    </Typography>
+                  )}
+
+                  {ex.tip && (
+                    <Typography
+                      sx={{ fontSize: "0.9rem", color: "#555", mt: 0.5 }}
+                    >
+                      💡 <strong>Tip:</strong> {ex.tip}
+                    </Typography>
+                  )}
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        )}
       </Card>
     </Box>
   );
