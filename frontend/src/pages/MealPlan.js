@@ -18,6 +18,7 @@ function MealPlan() {
     diet_type: "Veg",
     cuisine: "South Indian",
     protein: 110,
+    diet_preference: "High Protein",   // ⭐ NEW
   });
 
   const [loading, setLoading] = useState(false);
@@ -30,30 +31,25 @@ function MealPlan() {
       [name]: name === "calories" || name === "protein" ? Number(value) : value,
     }));
   };
-const handleGenerate = async () => {
-  setLoading(true);
-  setMealPlan("");
 
-  try {
-    const res = await axios.post(
-      "https://fitness-ai-backend-l6x5.onrender.com/generate-meal-plan",
-      form
-    );
+  const handleGenerate = async () => {
+    setLoading(true);
+    setMealPlan("");
 
-    if (res.data.error) {
-      setMealPlan("⚠️ " + res.data.error);
-    } else if (!res.data.meal_plan) {
-      setMealPlan("⚠️ No meal plan returned. Try again.");
-    } else {
-      setMealPlan(res.data.meal_plan);
+    try {
+      const res = await axios.post(
+        "https://fitness-ai-backend-l6x5.onrender.com/generate-meal-plan",
+        form
+      );
+
+      setMealPlan(res.data.meal_plan || "No meal plan returned.");
+    } catch (err) {
+      console.error(err);
+      setMealPlan("⚠️ Network error. Try again.");
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error(err);
-    setMealPlan("⚠️ Network error. Try again.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <Box
@@ -128,7 +124,6 @@ const handleGenerate = async () => {
             value={form.cuisine}
             onChange={handleChange}
             fullWidth
-            placeholder="South Indian, North Indian, etc."
           />
 
           <TextField
@@ -139,6 +134,23 @@ const handleGenerate = async () => {
             onChange={handleChange}
             fullWidth
           />
+
+          {/* ⭐ NEW Diet Preference Dropdown */}
+          <TextField
+            select
+            label="Diet Preference"
+            name="diet_preference"
+            value={form.diet_preference}
+            onChange={handleChange}
+            fullWidth
+          >
+            <MenuItem value="High Protein">High Protein</MenuItem>
+            <MenuItem value="Low Carb">Low Carb</MenuItem>
+            <MenuItem value="Vegan">Vegan</MenuItem>
+            <MenuItem value="Diabetic Friendly">Diabetic Friendly</MenuItem>
+            <MenuItem value="Gluten Free">Gluten Free</MenuItem>
+            <MenuItem value="Thyroid Friendly">Thyroid Friendly</MenuItem>
+          </TextField>
         </Box>
 
         <Button
@@ -158,10 +170,7 @@ const handleGenerate = async () => {
         >
           {loading ? (
             <>
-              <CircularProgress
-                size={20}
-                sx={{ color: "white", mr: 1 }}
-              />
+              <CircularProgress size={20} sx={{ color: "white", mr: 1 }} />
               Generating Meal Plan...
             </>
           ) : (
@@ -171,36 +180,34 @@ const handleGenerate = async () => {
 
         {/* Result */}
         <Card
-  sx={{
-    padding: 2,
-    borderRadius: 2,
-    backgroundColor: "#ffffff",
-    maxHeight: "400px",
-    overflowY: "auto",
-  }}
->
-  <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-    Result
-  </Typography>
+          sx={{
+            padding: 2,
+            borderRadius: 2,
+            backgroundColor: "#ffffff",
+            maxHeight: "400px",
+            overflowY: "auto",
+          }}
+        >
+          <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+            Result
+          </Typography>
 
-  {mealPlan ? (
-    <pre
-      style={{
-        whiteSpace: "pre-wrap",
-        fontFamily: "inherit",
-        fontSize: "0.95rem",
-        lineHeight: 1.5
-      }}
-    >
-      {mealPlan}
-    </pre>
-  ) : (
-    <Typography variant="body1" sx={{ color: "gray" }}>
-      No plan yet. Fill details and click "Generate AI Meal Plan".
-    </Typography>
-  )}
-</Card>
-
+          {mealPlan ? (
+            <pre
+              style={{
+                whiteSpace: "pre-wrap",
+                fontFamily: "inherit",
+                fontSize: "0.95rem",
+              }}
+            >
+              {mealPlan}
+            </pre>
+          ) : (
+            <Typography variant="body1" sx={{ color: "gray" }}>
+              No plan yet. Fill details and click "Generate AI Meal Plan".
+            </Typography>
+          )}
+        </Card>
       </Card>
     </Box>
   );

@@ -47,6 +47,21 @@ function Dashboard() {
         >
           View Weekly Plan 📅
         </button>
+<button
+  onClick={() => navigate("/workout-ai")}
+  style={{
+    padding: "10px 16px",
+    marginBottom: "20px",
+    background: "#43A047",
+    color: "white",
+    borderRadius: "8px",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "1rem"
+  }}
+>
+  Generate AI Workout 💪🤖
+</button>
 
         <button
           onClick={() => navigate("/meal-plan")}

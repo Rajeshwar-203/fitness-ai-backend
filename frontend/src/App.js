@@ -11,11 +11,16 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import WeeklyPlan from "./pages/WeeklyPlan";
-import MealPlan from "./pages/MealPlan";   // ✅ NEW
+import MealPlan from "./pages/MealPlan";
+import WorkoutAI from "./pages/WorkoutAI";
+import Navbar from "./components/Navbar";   // ✅ NEW
 
 function App() {
   return (
     <BrowserRouter basename="/">
+      {/* Navbar visible on all pages except maybe onboarding if you want */}
+      <Navbar />
+
       <Routes>
         <Route path="/" element={<StepName />} />
         <Route path="/goal" element={<StepGoal />} />
@@ -27,7 +32,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/weekly-plan" element={<WeeklyPlan />} />
-        <Route path="/meal-plan" element={<MealPlan />} />  {/* ✅ NEW */}
+        <Route path="/meal-plan" element={<MealPlan />} />
+        <Route path="/workout-ai" element={<WorkoutAI />} />
       </Routes>
     </BrowserRouter>
   );
