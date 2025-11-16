@@ -184,3 +184,84 @@ def generate_plan(user: User):
             "fats_g": round(fats, 1)
         }
     }
+@app.post("/generate-weekly-plan")
+def generate_weekly_plan(user: User):
+
+    # Base workout templates
+    workouts = {
+        "Lose Fat": [
+            "HIIT + Cardio",
+            "Full Body Circuit",
+            "Core + Abs",
+            "Active Recovery Walk",
+            "HIIT + Strength Mix",
+            "Lower Body Conditioning",
+            "Rest / Stretch"
+        ],
+        "Gain Muscle": [
+            "Chest + Triceps",
+            "Back + Biceps",
+            "Leg Day",
+            "Shoulders + Abs",
+            "Full Body Strength",
+            "Glutes + Hamstrings",
+            "Rest / Mobility"
+        ],
+        "Maintenance": [
+            "Light Cardio",
+            "Upper Body",
+            "Core Stability",
+            "Lower Body",
+            "Full Body",
+            "Yoga / Stretch",
+            "Rest"
+        ]
+    }
+
+    # Calories for each goal
+    calories_map = {
+        "Lose Fat": 1800,
+        "Gain Muscle": 2400,
+        "Maintenance": 2000
+    }
+
+    # Macros calculation per day
+    def calc_macros(weight, calories, goal):
+        if goal == "Gain Muscle":
+            protein = weight * 1.8
+        elif goal == "Lose Fat":
+            protein = weight * 1.5
+        else:
+            protein = weight * 1.2
+
+        protein_calories = protein * 4
+        remaining = calories - protein_calories
+
+        carbs = (remaining * 0.6) / 4
+        fats = (remaining * 0.4) / 9
+
+        return {
+            "protein_g": round(protein, 1),
+            "carbs_g": round(carbs, 1),
+            "fats_g": round(fats, 1)
+        }
+
+    goal = user.goal
+    weekly_workouts = workouts[goal]
+    calories = calories_map[goal]
+
+    weekly_plan = []
+
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+    for i in range(7):
+        weekly_plan.append({
+            "day": days[i],
+            "workout": weekly_workouts[i],
+            "calories": calories,
+            "macros": calc_macros(user.weight, calories, goal)
+        })
+
+    return {
+        "weekly_plan": weekly_plan
+    }

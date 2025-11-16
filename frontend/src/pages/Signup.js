@@ -8,7 +8,7 @@ function Signup() {
   const [data, setData] = useState({ name: "", email: "", password: "" });
 
   const handleSignup = async () => {
-    const res = await axios.post("http://127.0.0.1:8000/signup", data);
+    const res = await axios.post("https://fitness-ai-backend.onrender.com/signup", data);
 
     if (res.data.token) {
       localStorage.setItem("token", res.data.token);
