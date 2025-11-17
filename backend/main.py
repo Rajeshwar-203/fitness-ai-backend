@@ -379,7 +379,7 @@ Make sure numbers are realistic for a {req.goal} {req.diet_type} South Indian st
 """
 
     try:
-        model = genai.GenerativeModel("models/gemini-2.5-flash")
+        model = genai.GenerativeModel("models/gemini-pro")
         response = model.generate_content(prompt)
 
         import json
