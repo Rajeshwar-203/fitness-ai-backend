@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+// frontend/src/pages/WorkoutAI.js
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Card,
@@ -9,8 +10,11 @@ import {
   CircularProgress,
   Grid,
   Chip,
+  Divider,
 } from "@mui/material";
 import axios from "axios";
+
+const BACKEND = "https://fitness-ai-backend-l6x5.onrender.com";
 
 function WorkoutAI() {
   const [form, setForm] = useState({
@@ -23,8 +27,11 @@ function WorkoutAI() {
   });
 
   const [loading, setLoading] = useState(false);
-  const [workoutPlan, setWorkoutPlan] = useState(null);
+  const [workoutPlan, setWorkoutPlan] = useState([]); // ⭐ array of exercises
+  const [history, setHistory] = useState([]);
   const [error, setError] = useState("");
+
+  const email = localStorage.getItem("email") || "";
 
   const equipmentOptions = [
     "Dumbbells",
@@ -46,33 +53,55 @@ function WorkoutAI() {
   ];
 
   const handleChange = (e) => {
-    const { name, value, multiple, selectedOptions } = e.target;
+    const { name, value } = e.target;
 
-    if (multiple) {
-      const selected = Array.from(selectedOptions, (opt) => opt.value);
+    // Multi-select for equipment & health conditions
+    if (e.target.multiple) {
+      const selected = Array.from(
+        e.target.selectedOptions,
+        (option) => option.value
+      );
       setForm((prev) => ({ ...prev, [name]: selected }));
     } else {
       setForm((prev) => ({ ...prev, [name]: value }));
     }
   };
 
+  const fetchHistory = async () => {
+    if (!email) return;
+    try {
+      const res = await axios.get(`${BACKEND}/workout-history`, {
+        params: { email },
+      });
+      setHistory(res.data || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleGenerate = async () => {
     setLoading(true);
-    setWorkoutPlan(null);
     setError("");
+    setWorkoutPlan([]);
 
     try {
+      const payload = {
+        ...form,
+        available_time: Number(form.available_time),
+        age: Number(form.age),
+        user_email: email || null,
+      };
+
       const res = await axios.post(
-        "https://fitness-ai-backend-l6x5.onrender.com/generate-workout-plan-ai",
-        form
+        `${BACKEND}/generate-workout-plan-ai`,
+        payload
       );
 
       if (res.data.error) {
         setError(res.data.error);
-      } else if (Array.isArray(res.data.workout_plan)) {
-        setWorkoutPlan(res.data.workout_plan);
       } else {
-        setError("No workout returned.");
+        setWorkoutPlan(res.data.workout_plan || []);
+        await fetchHistory();
       }
     } catch (err) {
       console.error(err);
@@ -82,11 +111,15 @@ function WorkoutAI() {
     }
   };
 
+  useEffect(() => {
+    fetchHistory();
+    // eslint-disable-next-line
+  }, []);
+
   const difficultyColor = (diff) => {
     if (!diff) return "default";
-    const d = diff.toLowerCase();
-    if (d === "easy") return "success";
-    if (d === "hard") return "error";
+    if (diff === "Easy") return "success";
+    if (diff === "Hard") return "error";
     return "warning"; // OK
   };
 
@@ -113,8 +146,7 @@ function WorkoutAI() {
           AI Workout Generator 💪🤖
         </Typography>
         <Typography sx={{ mb: 3, color: "#555" }}>
-          Get a full routine with warm-up, main workout & cool-down based on
-          your goal, time, and health conditions.
+          Get a smart, safe routine based on your goal, time, and health.
         </Typography>
 
         {/* FORM GRID */}
@@ -199,6 +231,12 @@ function WorkoutAI() {
           </TextField>
         </Box>
 
+        {error && (
+          <Typography sx={{ color: "red", mb: 1, fontSize: "0.9rem" }}>
+            {error}
+          </Typography>
+        )}
+
         <Button
           variant="contained"
           disabled={loading}
@@ -218,86 +256,140 @@ function WorkoutAI() {
               <CircularProgress size={20} sx={{ mr: 1, color: "white" }} />
               Generating Workout...
             </>
+          ) : workoutPlan.length > 0 ? (
+            "Regenerate Workout 🔁"
           ) : (
             "Generate Workout 💪🤖"
           )}
         </Button>
 
-        {error && (
-          <Typography sx={{ color: "red", mb: 2 }}>{error}</Typography>
-        )}
+        {/* Current Workout Plan */}
+        {workoutPlan && workoutPlan.length > 0 ? (
+          <>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+              Today’s AI Workout Plan
+            </Typography>
 
-        {!workoutPlan && !error && !loading && (
-          <Typography sx={{ color: "gray" }}>
-            Fill details and click <strong>Generate Workout</strong>.
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              {workoutPlan.map((ex, idx) => (
+                <Grid item xs={12} md={6} key={idx}>
+                  <Card
+                    sx={{
+                      padding: 2,
+                      borderRadius: 2,
+                      boxShadow: 2,
+                      backgroundColor: "#ffffff",
+                      height: "100%",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 1,
+                      }}
+                    >
+                      <Typography sx={{ fontWeight: 600 }}>
+                        {ex.exercise}
+                      </Typography>
+                      {ex.difficulty && (
+                        <Chip
+                          label={ex.difficulty}
+                          color={difficultyColor(ex.difficulty)}
+                          size="small"
+                        />
+                      )}
+                    </Box>
+
+                    {ex.section && (
+                      <Typography
+                        sx={{
+                          fontSize: "0.8rem",
+                          color:
+                            ex.section === "Warm-up"
+                              ? "#00897B"
+                              : ex.section === "Cool-down"
+                              ? "#6A1B9A"
+                              : "#1976D2",
+                          fontWeight: 600,
+                          mb: 0.5,
+                        }}
+                      >
+                        {ex.section}
+                      </Typography>
+                    )}
+
+                    <Typography sx={{ fontSize: "0.9rem", color: "#555" }}>
+                      <strong>Muscles:</strong> {ex.muscles}
+                    </Typography>
+                    <Typography sx={{ fontSize: "0.9rem" }}>
+                      <strong>Duration:</strong> {ex.duration}
+                    </Typography>
+
+                    <Typography
+                      sx={{
+                        fontSize: "0.85rem",
+                        mt: 1,
+                        color: "#444",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      💡 {ex.tip}
+                    </Typography>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </>
+        ) : (
+          <Typography sx={{ color: "#666", mb: 3 }}>
+            No workout yet. Fill details and click{" "}
+            <strong>"Generate Workout"</strong>.
           </Typography>
         )}
 
-        {/* RESULT CARDS */}
-        {Array.isArray(workoutPlan) && (
-          <Grid container spacing={2}>
-            {workoutPlan.map((ex, idx) => (
-              <Grid item xs={12} md={6} key={idx}>
-                <Card
-                  sx={{
-                    borderRadius: 3,
-                    padding: 2,
-                    boxShadow: 2,
-                    backgroundColor: "#ffffff",
-                    height: "100%",
-                  }}
-                >
-                  <Box
+        {/* History Section */}
+        {email && history.length > 0 && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+              Previous AI Workouts 🕒
+            </Typography>
+            <Typography sx={{ mb: 2, fontSize: "0.9rem", color: "#555" }}>
+              Showing last {history.length} workouts for <strong>{email}</strong>
+            </Typography>
+
+            <Grid container spacing={2}>
+              {history.map((h) => (
+                <Grid item xs={12} md={6} key={h.id}>
+                  <Card
                     sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      mb: 1,
+                      padding: 2,
+                      borderRadius: 2,
+                      boxShadow: 1,
+                      backgroundColor: "#FFFFFF",
                     }}
                   >
-                    <Typography
-                      variant="h6"
-                      sx={{ fontWeight: 700, pr: 1 }}
-                    >
-                      {ex.exercise}
+                    <Typography sx={{ fontWeight: 600 }}>
+                      {h.goal} • {h.fitness_level}
                     </Typography>
-                    {ex.difficulty && (
-                      <Chip
-                        label={ex.difficulty}
-                        color={difficultyColor(ex.difficulty)}
-                        size="small"
-                      />
-                    )}
-                  </Box>
-
-                  <Typography
-                    sx={{ fontSize: "0.85rem", color: "#757575", mb: 0.5 }}
-                  >
-                    {ex.phase && `Phase: ${ex.phase}`}
-                  </Typography>
-
-                  {ex.muscles && (
-                    <Typography sx={{ mb: 0.5 }}>
-                      <strong>Muscles:</strong> {ex.muscles}
+                    <Typography sx={{ fontSize: "0.85rem", color: "#777" }}>
+                      Time: {h.available_time} mins • Age: {h.age}
                     </Typography>
-                  )}
-
-                  {ex.duration && (
-                    <Typography sx={{ mb: 0.5 }}>
-                      <strong>Duration / Sets:</strong> {ex.duration}
+                    <Typography sx={{ fontSize: "0.85rem", color: "#777" }}>
+                      {h.created_at
+                        ? new Date(h.created_at).toLocaleString()
+                        : ""}
                     </Typography>
-                  )}
-
-                  {ex.tip && (
-                    <Typography
-                      sx={{ fontSize: "0.9rem", color: "#555", mt: 0.5 }}
-                    >
-                      💡 <strong>Tip:</strong> {ex.tip}
+                    <Typography sx={{ mt: 1, fontSize: "0.9rem" }}>
+                      Exercises: {Array.isArray(h.plan) ? h.plan.length : 0}
                     </Typography>
-                  )}
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </>
         )}
       </Card>
     </Box>

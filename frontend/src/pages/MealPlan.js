@@ -1,5 +1,5 @@
 // frontend/src/pages/MealPlan.js
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Card,
@@ -9,9 +9,11 @@ import {
   Button,
   CircularProgress,
   Grid,
-  Chip,
+  Divider,
 } from "@mui/material";
 import axios from "axios";
+
+const BACKEND = "https://fitness-ai-backend-l6x5.onrender.com";
 
 function MealPlan() {
   const [form, setForm] = useState({
@@ -24,35 +26,56 @@ function MealPlan() {
   });
 
   const [loading, setLoading] = useState(false);
-  const [mealPlan, setMealPlan] = useState(null);
+  const [mealPlan, setMealPlan] = useState(null);     // ⭐ object
+  const [history, setHistory] = useState([]);         // ⭐ previous plans
   const [error, setError] = useState("");
+
+  const email = localStorage.getItem("email") || "";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
       [name]:
-        name === "calories" || name === "protein" ? Number(value) : value,
+        name === "calories" || name === "protein"
+          ? Number(value)
+          : value,
     }));
+  };
+
+  const fetchHistory = async () => {
+    if (!email) return;
+    try {
+      const res = await axios.get(`${BACKEND}/meal-history`, {
+        params: { email },
+      });
+      setHistory(res.data || []);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleGenerate = async () => {
     setLoading(true);
-    setMealPlan(null);
     setError("");
+    setMealPlan(null);
 
     try {
-      const res = await axios.post(
-        "https://fitness-ai-backend-l6x5.onrender.com/generate-meal-plan",
-        form
-      );
+      const payload = {
+        ...form,
+        calories: Number(form.calories),
+        protein: Number(form.protein),
+        diet_preference: form.diet_preference,
+        user_email: email || null,
+      };
+
+      const res = await axios.post(`${BACKEND}/generate-meal-plan`, payload);
 
       if (res.data.error) {
         setError(res.data.error);
-      } else if (res.data.meal_plan) {
-        setMealPlan(res.data.meal_plan);
       } else {
-        setError("No meal plan returned.");
+        setMealPlan(res.data.meal_plan || null);
+        await fetchHistory();
       }
     } catch (err) {
       console.error(err);
@@ -62,42 +85,46 @@ function MealPlan() {
     }
   };
 
+  useEffect(() => {
+    fetchHistory();
+    // eslint-disable-next-line
+  }, []);
+
   const renderMealCard = (title, data, emoji) => {
     if (!data) return null;
-
     return (
-      <Grid item xs={12} md={6}>
-        <Card
-          sx={{
-            borderRadius: 3,
-            padding: 2.5,
-            boxShadow: 3,
-            backgroundColor: "#ffffff",
-          }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-            {emoji} {title}
-          </Typography>
-          <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
-            {data.dish}
-          </Typography>
-          <Typography sx={{ fontSize: "0.9rem", color: "#555", mb: 1.5 }}>
-            {data.description}
-          </Typography>
-
-          <Typography sx={{ fontWeight: 600, mb: 0.5 }}>Macros</Typography>
-          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-            <Chip label={`Protein: ${data.protein} g`} />
-            <Chip label={`Carbs: ${data.carbs} g`} />
-            <Chip label={`Fats: ${data.fats} g`} />
-            <Chip label={`Calories: ${data.calories} kcal`} />
-          </Box>
-        </Card>
-      </Grid>
+      <Card
+        sx={{
+          borderRadius: 3,
+          padding: 2.5,
+          boxShadow: 2,
+          backgroundColor: "#ffffff",
+          height: "100%",
+        }}
+      >
+        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+          {emoji} {title}
+        </Typography>
+        <Typography sx={{ fontWeight: 600 }}>{data.dish}</Typography>
+        <Typography sx={{ fontSize: "0.9rem", color: "#555", mt: 0.5 }}>
+          {data.description}
+        </Typography>
+        <Divider sx={{ my: 1.5 }} />
+        <Typography sx={{ fontSize: "0.9rem" }}>
+          <strong>Protein:</strong> {data.protein} g
+        </Typography>
+        <Typography sx={{ fontSize: "0.9rem" }}>
+          <strong>Carbs:</strong> {data.carbs} g
+        </Typography>
+        <Typography sx={{ fontSize: "0.9rem" }}>
+          <strong>Fats:</strong> {data.fats} g
+        </Typography>
+        <Typography sx={{ fontSize: "0.9rem", mt: 0.5 }}>
+          <strong>Calories:</strong> {data.calories} kcal
+        </Typography>
+      </Card>
     );
   };
-
-  const summary = mealPlan?.summary;
 
   return (
     <Box
@@ -122,8 +149,7 @@ function MealPlan() {
           AI Meal Plan Generator 🍽️
         </Typography>
         <Typography sx={{ mb: 3, color: "#555" }}>
-          Get a full-day meal plan personalized to your goal, calories and
-          preferences.
+          Smart South-Indian style meals, tailored to your goal and diet.
         </Typography>
 
         {/* Form */}
@@ -176,7 +202,6 @@ function MealPlan() {
             value={form.cuisine}
             onChange={handleChange}
             fullWidth
-            placeholder="South Indian, North Indian, etc."
           />
 
           <TextField
@@ -205,6 +230,12 @@ function MealPlan() {
           </TextField>
         </Box>
 
+        {error && (
+          <Typography sx={{ color: "red", mb: 1, fontSize: "0.9rem" }}>
+            {error}
+          </Typography>
+        )}
+
         <Button
           variant="contained"
           onClick={handleGenerate}
@@ -225,75 +256,114 @@ function MealPlan() {
               <CircularProgress size={20} sx={{ color: "white", mr: 1 }} />
               Generating Meal Plan...
             </>
+          ) : mealPlan ? (
+            "Regenerate Plan 🔁"
           ) : (
             "Generate AI Meal Plan 🤖"
           )}
         </Button>
 
-        {error && (
-          <Typography sx={{ color: "red", mb: 2 }}>{error}</Typography>
-        )}
-
-        {/* Result */}
-        {!mealPlan && !error && !loading && (
-          <Typography sx={{ color: "gray" }}>
-            No plan yet. Fill details and click{" "}
-            <strong>Generate AI Meal Plan</strong>.
-          </Typography>
-        )}
-
-        {mealPlan && (
+        {/* Current Plan */}
+        {mealPlan ? (
           <>
-            {/* Summary Card */}
-            {summary && (
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+              Today’s AI Meal Plan
+            </Typography>
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid item xs={12} md={6}>
+                {renderMealCard("Breakfast", mealPlan.breakfast, "🥞")}
+              </Grid>
+              <Grid item xs={12} md={6}>
+                {renderMealCard("Lunch", mealPlan.lunch, "🍛")}
+              </Grid>
+              <Grid item xs={12} md={6}>
+                {renderMealCard("Snack", mealPlan.snack, "🍏")}
+              </Grid>
+              <Grid item xs={12} md={6}>
+                {renderMealCard("Dinner", mealPlan.dinner, "🍽️")}
+              </Grid>
+            </Grid>
+
+            {mealPlan.summary && (
               <Card
                 sx={{
-                  borderRadius: 3,
+                  borderRadius: 2,
                   padding: 2.5,
-                  boxShadow: 2,
-                  background:
-                    "linear-gradient(135deg, #5C6BC0, #42A5F5)",
-                  color: "white",
+                  boxShadow: 1,
+                  backgroundColor: "#E8EAF6",
                   mb: 3,
                 }}
               >
-                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                   📊 Daily Macro Summary
                 </Typography>
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 1.5,
-                    alignItems: "center",
-                  }}
-                >
-                  <Chip
-                    label={`Protein: ${summary.total_protein} g`}
-                    sx={{ backgroundColor: "rgba(255,255,255,0.2)" }}
-                  />
-                  <Chip
-                    label={`Carbs: ${summary.total_carbs} g`}
-                    sx={{ backgroundColor: "rgba(255,255,255,0.2)" }}
-                  />
-                  <Chip
-                    label={`Fats: ${summary.total_fats} g`}
-                    sx={{ backgroundColor: "rgba(255,255,255,0.2)" }}
-                  />
-                  <Chip
-                    label={`Calories: ${summary.total_calories} kcal`}
-                    sx={{ backgroundColor: "rgba(255,255,255,0.2)" }}
-                  />
-                </Box>
+                <Typography>
+                  <strong>Protein:</strong>{" "}
+                  {mealPlan.summary.total_protein} g
+                </Typography>
+                <Typography>
+                  <strong>Carbs:</strong> {mealPlan.summary.total_carbs} g
+                </Typography>
+                <Typography>
+                  <strong>Fats:</strong> {mealPlan.summary.total_fats} g
+                </Typography>
+                <Typography sx={{ mt: 0.5 }}>
+                  <strong>Calories:</strong>{" "}
+                  {mealPlan.summary.total_calories} kcal
+                </Typography>
+                <Typography sx={{ mt: 1, fontStyle: "italic" }}>
+                  {mealPlan.summary.notes}
+                </Typography>
               </Card>
             )}
+          </>
+        ) : (
+          <Typography sx={{ color: "#666", mb: 3 }}>
+            No plan yet. Fill details and click{" "}
+            <strong>"Generate AI Meal Plan"</strong>.
+          </Typography>
+        )}
 
-            {/* Meal Cards Grid */}
+        {/* History */}
+        {email && history.length > 0 && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+              Previous AI Meal Plans 🕒
+            </Typography>
+            <Typography sx={{ mb: 2, fontSize: "0.9rem", color: "#555" }}>
+              Showing last {history.length} plans for <strong>{email}</strong>
+            </Typography>
+
             <Grid container spacing={2}>
-              {renderMealCard("Breakfast", mealPlan.breakfast, "🥞")}
-              {renderMealCard("Lunch", mealPlan.lunch, "🍛")}
-              {renderMealCard("Snack", mealPlan.snack, "🍏")}
-              {renderMealCard("Dinner", mealPlan.dinner, "🍽️")}
+              {history.map((h) => (
+                <Grid item xs={12} md={6} key={h.id}>
+                  <Card
+                    sx={{
+                      padding: 2,
+                      borderRadius: 2,
+                      boxShadow: 1,
+                      backgroundColor: "#FFFFFF",
+                    }}
+                  >
+                    <Typography sx={{ fontWeight: 600 }}>
+                      {h.goal} • {h.diet_type} • {h.diet_preference}
+                    </Typography>
+                    <Typography sx={{ fontSize: "0.85rem", color: "#777" }}>
+                      {h.cuisine} •{" "}
+                      {h.created_at
+                        ? new Date(h.created_at).toLocaleString()
+                        : ""}
+                    </Typography>
+                    {h.plan?.summary && (
+                      <Typography sx={{ mt: 1, fontSize: "0.9rem" }}>
+                        Protein: {h.plan.summary.total_protein} g • Calories:{" "}
+                        {h.plan.summary.total_calories} kcal
+                      </Typography>
+                    )}
+                  </Card>
+                </Grid>
+              ))}
             </Grid>
           </>
         )}

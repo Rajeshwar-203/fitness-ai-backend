@@ -1,4 +1,5 @@
 // frontend/src/pages/WeeklyPlan.js
+// (same imports as you already have)
 import React, { useState } from "react";
 import {
   Box,
@@ -10,6 +11,8 @@ import {
   CircularProgress,
 } from "@mui/material";
 import axios from "axios";
+
+const BACKEND = "https://fitness-ai-backend-l6x5.onrender.com";
 
 function WeeklyPlan() {
   const [weeklyPlan, setWeeklyPlan] = useState(null);
@@ -27,12 +30,14 @@ function WeeklyPlan() {
         goal: localStorage.getItem("goal") || "Gain Muscle",
         height: parseFloat(localStorage.getItem("height") || "170"),
         weight: parseFloat(localStorage.getItem("weight") || "60"),
-        equipment: JSON.parse(localStorage.getItem("equipment") || '["dumbbells"]'),
+        equipment: JSON.parse(
+          localStorage.getItem("equipment") || '["dumbbells"]'
+        ),
         cuisine: localStorage.getItem("cuisine") || "Indian",
       };
 
       const res = await axios.post(
-        "https://fitness-ai-backend-l6x5.onrender.com/generate-weekly-plan",
+        `${BACKEND}/generate-weekly-plan`,
         user
       );
 
@@ -85,11 +90,10 @@ function WeeklyPlan() {
           }}
         >
           {loading
-  ? "Generating..."
-  : weeklyPlan
-    ? "Regenerate Weekly Plan 🔄"
-    : "Generate Weekly Plan"}
-
+            ? "Generating..."
+            : weeklyPlan
+            ? "Regenerate Weekly Plan 🔄"
+            : "Generate Weekly Plan"}
         </Button>
 
         {loading && <CircularProgress size={26} />}
@@ -109,63 +113,67 @@ function WeeklyPlan() {
       )}
 
       {/* Weekly Cards */}
+      {weeklyPlan && (
+        <Grid container spacing={2} sx={{ mt: 1 }}>
+          {weeklyPlan.map((dayItem, index) => {
+            const macros = dayItem.macros || {};
+            return (
+              <Grid item xs={12} sm={6} md={4} key={index}>
+                <Card
+                  sx={{
+                    borderRadius: 3,
+                    padding: 2.5,
+                    boxShadow: 3,
+                    background: "#ffffff",
+                    borderTop: "4px solid #5C6BC0",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Box>
+                    <Typography
+                      variant="h6"
+                      sx={{ fontWeight: 700, mb: 0.5, color: "#303F9F" }}
+                    >
+                      {dayItem.day}
+                    </Typography>
+                    <Typography sx={{ mb: 1.5, color: "#555" }}>
+                      <strong>Workout:</strong> {dayItem.workout}
+                    </Typography>
 
+                    <Divider sx={{ my: 1.5 }} />
 
-{weeklyPlan && (
-  <Grid container spacing={2} sx={{ mt: 1 }}>
-    {weeklyPlan.map((dayItem, index) => {
-      const macros = dayItem.macros || {};
-      return (
-        <Grid item xs={12} sm={6} md={4} key={index}>
-          <Card
-            sx={{
-              borderRadius: 3,
-              padding: 2.5,
-              boxShadow: 3,
-              background: "#ffffff",
-              borderTop: "4px solid #5C6BC0",
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-            }}
-          >
-            <Box>
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: 700, mb: 0.5, color: "#303F9F" }}
-              >
-                {dayItem.day}
-              </Typography>
-              <Typography sx={{ mb: 1.5, color: "#555" }}>
-                <strong>Workout:</strong> {dayItem.workout}
-              </Typography>
+                    <Typography sx={{ mb: 1 }}>
+                      <strong>Calories:</strong> {dayItem.calories} kcal
+                    </Typography>
 
-              <Divider sx={{ my: 1.5 }} />
-
-              <Typography sx={{ mb: 1 }}>
-                <strong>Calories:</strong> {dayItem.calories} kcal
-              </Typography>
-
-              <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
-                Macros
-              </Typography>
-              <Typography sx={{ fontSize: "0.95rem" }}>
-                Protein: {macros.protein_g ?? "-"} g
-              </Typography>
-              <Typography sx={{ fontSize: "0.95rem" }}>
-                Carbs: {macros.carbs_g ?? "-"} g
-              </Typography>
-              <Typography sx={{ fontSize: "0.95rem" }}>
-                Fats: {macros.fats_g ?? "-"} g
-              </Typography>
-            </Box>
-          </Card>
+                    <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
+                      Macros
+                    </Typography>
+                    <Typography sx={{ fontSize: "0.95rem" }}>
+                      Protein:{" "}
+                      {macros.protein_g !== undefined
+                        ? macros.protein_g
+                        : "-"}{" "}
+                      g
+                    </Typography>
+                    <Typography sx={{ fontSize: "0.95rem" }}>
+                      Carbs:{" "}
+                      {macros.carbs_g !== undefined ? macros.carbs_g : "-"} g
+                    </Typography>
+                    <Typography sx={{ fontSize: "0.95rem" }}>
+                      Fats:{" "}
+                      {macros.fats_g !== undefined ? macros.fats_g : "-"} g
+                    </Typography>
+                  </Box>
+                </Card>
+              </Grid>
+            );
+          })}
         </Grid>
-      );
-    })}
-  </Grid>
-)}
+      )}
     </Box>
   );
 }
